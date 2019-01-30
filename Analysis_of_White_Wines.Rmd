@@ -120,8 +120,6 @@ most wines falling in the middle of the scale and a one or two on each end.
 
 Now lets see a quick visual overview of the rest of our data points.
 
-
-
 ```{r echo=FALSE, message=FALSE, warning=FALSE, univariate_plot_all}
 # create key, value pairs to compre quality
 ww_long <- gather(whiteWines, 
@@ -133,10 +131,9 @@ ggplot(ww_long, aes(value)) +
     geom_histogram(fill = 'darkblue')
 ```
 
-
 From the histograms above we can see that some of our data is close to normal
 distribution while other data is right skewed. There are no attributes that are
-left skewed in the dataset. We can aso deduce that there are outliers in several
+left skewed in the dataset. We can also deduce that there are outliers in several
 attributes based on the bin widths and what appears to be large empty space to
 the right of the bars.
 
@@ -144,273 +141,377 @@ Lets have a closer look at a __chlorides__ and __free.sulfur.dioxide__, two of
 the attributes that appear to have extreme outliers.
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE, univariate_plot_chlorides}
-# create histogram of chlorides
-ggplot(whiteWines, aes(chlorides)) + 
-  geom_histogram(fill = "darkslategrey") +
-  
-  # calculate outliers and label them on histogram
-  stat_bin(geom="text", aes(label = ifelse( 
-    x > 3 * IQR(whiteWines$chlorides) + quantile(whiteWines$chlorides)[4] & 
-      ..count.. > 0, ..count.., "")), vjust = -1.5)
+# create boxplot and histogram sidy by side for comparison
+grid.arrange(ggplot(whiteWines, aes(1, chlorides)) +
+               geom_jitter(alpha = 0.1) +
+               geom_boxplot(alpha = 0.2, color = 'red'),
+             ggplot(whiteWines, aes(chlorides)) +
+               geom_histogram(), ncol = 2) 
+             
+```
+```{r, echo=FALSE, message=FALSE, warning=FALSE, univariate_plot_free_sulfur}
+# create boxplot and histogram sidy by side for comparison
+grid.arrange(ggplot(whiteWines, aes(1, free.sulfur.dioxide)) +
+               geom_jitter(alpha = 0.1) +
+               geom_boxplot(alpha = 0.2, color = 'red'),
+             ggplot(whiteWines, aes(free.sulfur.dioxide)) +
+               geom_histogram(),ncol = 2)
 ```
 
-```{r echo=FALSE, message=FALSE, warning=FALSE, univariate_plot_free_sulfur}
-# create histogram of free sulfur dioxide
-ggplot(whiteWines, aes(free.sulfur.dioxide)) + 
-  geom_histogram(fill = "darkslategrey") +
-  
-  # calculate outliers and label them on histogram
-  stat_bin(geom="text", aes(
-    label = ifelse(x > 3 * IQR(whiteWines$free.sulfur.dioxide) + 
-    quantile(whiteWines$free.sulfur.dioxide)[4] & 
-      ..count.. > 0, ..count.., "")), vjust = -1.5)
+So our dateset contains quite a few outliers. These outliers could affect the
+outcome or quality of our analysis. So we will create a new dataframe that
+excludes all the rows of data that contains outiers in any of the attributes.
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, remove_outliers}
+# create new dataframe to remove outliers
+ww_no_outliers <- whiteWines
+
+# use boxplot to identify outliers then remove those rows from dataframe
+outlier_removal <- function(x){
+  outliers <- boxplot(ww_no_outliers[,x], plot = FALSE)$out
+  if (length(outliers)){
+    ww_no_outliers <- ww_no_outliers[-which(ww_no_outliers[,x] %in% outliers),]
+    return(ww_no_outliers)
+  }
+  else {
+    return(ww_no_outliers)
+  }
+}
+
+# loop through dataframe to remove outliers from columns 1 through 11
+for (name in names(ww_no_outliers[1:11])) {
+  for (column in ww_no_outliers[name]) {
+    if (is.numeric(column)) {
+      ww_no_outliers <- outlier_removal(name)
+    }
+  }
+}
+
+
 ```
 
-In both the above histograms the major outliers have been labeled to make them 
-easier to identify. Major outliers are calculated based on 
-Third Quartile + 3 * Inner Quartile Range.
+This new dataframe contains 3,973 observations. 925 rows that contained
+outliers were removed.
 
-The below histogram is for __pH__, an attribute that more closely follows a 
-normal distribution. As evident by the lack of any labeled bins, there were no 
-major outliers found here.
-
-```{r echo=FALSE, message=FALSE, warning=FALSE, univariate_plot_pH}
-# create histogram for pH
-ggplot(whiteWines, aes(pH)) + 
-  geom_histogram(fill = "darkslategrey") +
-  
-  # calculate outliers and label them on histogram
-  stat_bin(geom="text", aes(
-    label = ifelse(x > 3 * IQR(whiteWines$pH) + quantile(whiteWines$pH)[4] & 
-      ..count.. > 0, ..count.., "")), vjust = -1.5)
+```{r, echo=FALSE, message=FALSE, warning=FALSE, univariate_plot_variables2}
+# display structure of dataframe
+str(ww_no_outliers)
+```
+```{r, echo=FALSE, message=FALSE, warning=FALSE, univariate_plot_summary2}
+# display summary of dataframe
+summary(ww_no_outliers)
 ```
 
+Lets have another look at __chlorides__ and __free.sulfur.dioxide__ after the
+outliers have been removed.
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, univariate_plot_chlorides2}
+# create boxplot and histogram sidy by side for comparison
+grid.arrange(ggplot(ww_no_outliers, aes(1, chlorides)) +
+               geom_jitter(alpha = 0.1) +
+               geom_boxplot(alpha = 0.2, color = 'red'),
+             ggplot(ww_no_outliers, aes(chlorides)) +
+               geom_histogram(), ncol = 2)
+             
+```
+```{r, echo=FALSE, message=FALSE, warning=FALSE, univariate_plot_free_sulfur2}
+# create boxplot and histogram sidy by side for comparison
+grid.arrange(ggplot(ww_no_outliers, aes(1, free.sulfur.dioxide)) +
+               geom_jitter(alpha = 0.1) +
+               geom_boxplot(alpha = 0.2, color = 'red'),
+             ggplot(ww_no_outliers, aes(free.sulfur.dioxide)) +
+               geom_histogram(), ncol = 2)
+```
+
+We can see that the data is much cleaner and easier to visualize now. For the
+rest of this anlysis we will be using the data that excludes the outliers.
 
 # Univariate Analysis
 
-The dataset contains 4,898 observations and 12 variables. 11 variables are of
-the numeric data type and 1 variable is an integer.
+The orignal dataset contained 4,898 observations and 12 variables. 
+11 variables are of the numeric data type and 1 variable is an integer. A subset
+of this data was created to exclude outliers for the analysis. The subsetted
+data contains the same 12 variables, but only includes 3,815 observations.
 
 The main feature of interest in this dataset would be the Quality score. 
 Throughout this analysis we will investigate how the other variables 
 contribute, positive or negative, to that quality score.
 
-In order to organize the data in a way that was easier to display as an overview
-the tidyr library was used to create a new dataframe. Utilizing this library 
-value:key pairs were created for each variable and value. This process is
-defined as taking "wide"" data, many columns and fewer rows, and making it 
+In order to organize the data in a way that was easier to display as an 
+overview, the tidyr library was used to create a new dataframe. Utilizing this
+library, value:key pairs were created for each variable and value. This process
+is defined as taking "wide"" data, many columns and fewer rows, and making it 
 "long", many rows and fewer columns. The resulting dataframe's structure 
 contains 53,878 observations and 3 variables.
 
 Most distributions with in this dataset can be described as right skewed, or
-close to a normal. Several attributes in the dataset do contain major outliers,
-however the values are within an acceptable range for the process so for the
-purpose of this analysis they will be included.
+close to a normal.
 
 # Bivariate Plots
 
 Let's see if we can make any determinations as to whether any of these
-attributes have an affect on the quality of the wines.
+attributes have an affect on the __quality__ of the wines.
 
-We'll start by looking at a visual overview of how each attribute value
-correlates to the quality rating. We'll use scatterplots and smooth curves to
-help us more easuly identify trends.
+We'll start by looking for any correlations between each of the attributes.
 
-```{r echo=FALSE, message=FALSE, warning=FALSE, bivariate_plot_quality_all}
-# create facet containing histograms for each attribute
-ggplot(ww_long, aes(value, quality)) + 
-    facet_wrap(~measure, scales = 'free') + 
-    geom_point(color = 'darkblue') +
-    geom_smooth(color = 'orange')
+```{r echo=FALSE, message=FALSE, warning=FALSE, bivariate1}
+# create correlation for all attributes
+corr <- round(cor(ww_no_outliers), 1)
+
+ggcorrplot(corr, p.mat = cor_pmat(ww_no_outliers),
+           hc.order = TRUE, type = "lower",
+           color = c("red", "white", "blue"),
+           outline.col = "white", lab = TRUE)
+
+
 ```
 
-Very interesting. It appears that some attributes  like __alcohol__,
-__sulphates__, and __pH__ may have very little affect on the quality of the wine
-as evident by the relativly flat smooth curve.
+A correlation coefficient of > 4.0 is consindered a relatively strong 
+relationship. Between 2.0 and 4.0 is considered moderate and anything less than
+2.0 is weak.
 
-However, a few atributes do stand out. __free.sulfur.dioxide__ and 
-__total.sulfur.dioxide__ appear to have a sweet spot for higher quality scores
-and values outside that range, lower or higher, seems to negatively affect
-quality. Additionally, it appears the the higher the __volatile.acidity__ the
-lower the quality of wine. This makes sense since too high of levels of 
-__volatile.acidity__ can lead to an unpleasant, vinegar taste.
-
-We are going to take a closer look at these attributes.
-
-```{r echo=FALSE, message=FALSE, warning=FALSE, bivariate_plot_free.sulfur}
-ggplot(whiteWines, aes(free.sulfur.dioxide, quality)) +
-  geom_jitter(color = 'blue') +
-  geom_smooth(color = 'orange', fill = 'yellow')
-```
-
-Here we can more clearly see that there is a negative trend with
-__free.sulfur.dioxide__ and __quality__. When __free.sulfur.dioxide__ values are
-with in a specific range of about 0 - 100, quality does not seem affected much,
-however once the value start getting beyond 100 there is a noticable degredation
-in the __quality__ of the wine.
-
-So what has an effect on __free.sulfur.dioxide__? Let's again take a visual
-overview of our attributes, but this time focusing on how they compare to
-__free.sulfur.dioxide__.
-
-```{r echo=FALSE, message=FALSE, warning=FALSE, bivariate_plot_free.sulfur_all}
-# create key, value pairs to compare free sulfur dioxide
-ww_free.sulfur.dioxide <- gather(whiteWines, 
-                  key = measure,value = value, 
-                  -'quality', -'free.sulfur.dioxide')
-
-# create facet containing histograms for each attribute
-ggplot(ww_free.sulfur.dioxide, aes(free.sulfur.dioxide, value)) + 
-    facet_wrap(~measure, scales = 'free') + 
-    geom_point(color = 'darkblue') +
-    geom_smooth(color = 'orange')
-```
-
-Clearly more __free.sulfur.dioxide__ leads to more __total.sulfur.dioxide__.
-This makes perfect sense. There are a couple other trends that look interesting,
-__pH__ and __sulphates__, but at first glance it seems that the outliers may 
-have some some influence here.
-
-Since there is a strong relationship between __free.sulfur.dioxide__ and 
-__total.sulfur.dioxide__, lets explore it a little more.
-
-```{r echo=FALSE, message=FALSE, warning=FALSE, bivariate_plot_total.sulfur}
-# create scatter plot with smooth curve for free sulfur dioxide
-ggplot(whiteWines, aes(total.sulfur.dioxide, free.sulfur.dioxide)) +
-  geom_jitter(color = 'blue') +
-  geom_smooth(color = 'orange', fill = 'yellow')
-```
-
-Looking at this relationship more closely we can see that even excluding the
-outlier we have a postive relationsip between __free.sulfur.dioxide__ and
+This is pretty interesting. It appears that the strongest correlations are
+between __density__ and both __alcohol__ and __residual.sugar__. There also 
+looks to be some moderate correlations between our main attribute of interest, 
+__quality__, and the attributes __alcohol__, __density__, __chlorides__, and 
 __total.sulfur.dioxide__.
 
-But does this mean anything? Let's keep going by looking at how 
-__total.sulfur.dioxide__ is affected by the other attributes.
+Lets explore these relationships further.
 
-```{r echo=FALSE, message=FALSE, warning=FALSE, bivariate_plot_total.sulfur_all}
-# create key, value pairs to compare total sulfur dioxide
-ww_total.sulfur.dioxide <- gather(whiteWines, 
-                  key = measure,value = value, 
-                  -'quality', -'total.sulfur.dioxide')
+```{r echo=FALSE, message=FALSE, warning=FALSE, bivariate2}
+# function to create scatter plots with trend lines
+create_scatter <- function(x, y, xlabel, ylabel){
+  ggplot(ww_no_outliers, aes(x, y)) +
+      geom_point(alpha = 0.3, size = 1) +
+      geom_smooth(method = "lm", se = FALSE, size=1) +
+  xlab(xlabel) +
+  ylab(ylabel)
+}
 
-# create facet containing histograms for each attribute
-ggplot(ww_total.sulfur.dioxide, aes(total.sulfur.dioxide, value)) + 
-    facet_wrap(~measure, scales = 'free') + 
-    geom_point(color = 'darkblue') +
-    geom_smooth(color = 'orange')
+# create scatterplot by function
+create_scatter(ww_no_outliers$density, ww_no_outliers$alcohol, 'density',
+               'alcohol')
 ```
 
-of course we can see the relationship between __free.sulfur.dioxide__ and
-__total.sulfur.dioxide__ as we explored earlier. Also seen earlier with
-__free.sulfur.dioxide__ we can see that there is a positive trend with 
-__sulphates__ a depicted below.
+The relationship between __alcohol__ and __denisty__ is a negative relationship.
+This suggest that the higher the __alcohol__ content of the wine, the less 
+__dense__ the wine will be.
 
-
-```{r echo=FALSE, message=FALSE, warning=FALSE, bivariate_plot_sulphates}
-# create scatter plot with smooth curve for total sulfur dioxide
-ggplot(whiteWines, aes(total.sulfur.dioxide, sulphates)) +
-  geom_jitter(color = 'blue') +
-  geom_smooth(color = 'orange', fill = 'yellow')
+```{r echo=FALSE, message=FALSE, warning=FALSE, bivariate3}
+# create scatterplot by function
+create_scatter(ww_no_outliers$density, ww_no_outliers$residual.sugar, 'density',
+               'residual.sugar')
 ```
 
-Since __sulphates__ is a wine additive which can contribute to sulfur dioxide 
-gas (S02) levels it seems logical that the more __sulphates__ found in the wine
-then higher levels of __free.sulfur.dioxide__ and __total.sulfer.dioxide__ will
-exist.
+Conversely, the relationship between __residual.sugar__ and __density__ is a
+postive. This makes sense since it would seem logical that the more __sugar__
+that exists in the wine the more __dense__ it would become.
+
+So what does the relationship between __residual.sugar__ and __alcohol__ look
+like?
+```{r echo=FALSE, message=FALSE, warning=FALSE, bivariate4}
+# create scatterplot by function
+create_scatter(ww_no_outliers$residual.sugar, ww_no_outliers$alcohol, 
+               'residual.sugar', 'alcohol')
+```
+
+The negative relationship we see above coincides with the previous relationships
+we explored. A lower __residual.sugar__ value tends to result in a higher 
+__alcohol__ content.
+
+How about __quality__? Let's look at some of the moderate relationships between
+__quality__ and the other attributes.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, bivariate5}
+# function to create boxplot with jitter
+bivariate_quality <- function(y, ylabel){
+  ggplot(ww_no_outliers, aes(factor(quality), y)) +
+  geom_jitter(alpha = .3) +
+  geom_boxplot(alpha = .5, color = 'blue') +
+  stat_summary(fun.y = 'mean',
+               geom = 'point',
+               color = 'red',
+               shape = 8,
+               size = 4) +
+  ylab(ylabel)
+}
+
+# create graph by function
+bivariate_quality(ww_no_outliers$alcohol, 'alcohol')
+```
+
+We've already determined that no strong relationships exist between the
+rated __quality__ of the wine and any other attributes. At best there are a few
+moderate relationships. When comparing __quality__ to __alcohol__, we see that
+amongst the wines rated between 5 and 8 there exists __alcohol__ values from the
+whole range in the dataset. In fact the highest rated wines contain only higher
+alcohol percentages. This observation may just be a result of a relatively small
+dataset.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, bivariate6}
+# create scatterplot by function
+bivariate_quality(ww_no_outliers$density, 'density')
+```
+
+As with __alcohol__, __denstiy__ values are spread accross each of the
+__quality__ levels. The highest quality level only contains lower __density__.
+This coincides with the relationship between __desnity__ and __alcohol__ that
+we looked at earlier.
+
+Lets have have a look at the last two attributes with a moderate relationship, 
+__chlorides__ and __total.sulfur.dioxide__. I suspect we will see the same trend
+though.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, bivariate7}
+# create scatterplot by function
+bivariate_quality(ww_no_outliers$chlorides, 'chlorides')
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, bivariate8}
+# create scatterplot by function
+bivariate_quality(ww_no_outliers$total.sulfur.dioxide, 'total.sulfur.dioxide')
+```
+
+There is a definite trend here. Though moderate relationships exist between
+__quality__ and other attributes, the relationships do not appear to be 
+definitive except for the highest rated wines. Again, this may just be a result
+of relatively small dataset.
 
 # Bivariate Analysis
 
 We explored the relationship between seraval attributes through this bivariate
 analysis.
 
-Beginning with an overview of how each attribute affected __qaulity__, we
-identified a couple attributes to take a deeper look at. From there we explored
-__free.sulfur.dioxide__, which led is to __total.sulfur.dioxide__, then finally
-to __sulphates__. 
+Begining with the srongest relationship between attributes 
+ __alcohol__/ __density__ and __residual.sugar__/ __density__ , 
+ then looking at our __quality__ attribute and it's moderate relationships.
 
-We explored how each attribute affected the next and can
-conclude that the more __sulphates__ added to a wine increases the 
-__free.sulfur.dioxide__ and __total.sulfur.dioxie__ levels which can have a
-negative impact on the quality of wine.
+
+Through this analysis I had hoped we would identify correlations between
+attributes and it's related __quality__ score, however given the data it's not 
+possible to derive how each attribute could be manipulated to affect the 
+quality of wine.
 
 # Multivariate Plots Section
 
-In previous sections of the analysis we explored our data set and the indvidual
-attributes it contains. We also looked at how attrubites affect other 
-attributes. Now let see multiple attributes together. The first thing we will 
-look at is how each attribute correlates with the others.
+Let's take a look at the scatter plots we created earlier and overlay 
+__quality__ values on them.
 
-```{r echo=FALSE, message=FALSE, warning=FALSE, Multivariate_Plots}
-# create correlation for all attributes
-corr <- round(cor(whiteWines), 1)
+```{r echo=FALSE, message=FALSE, warning=FALSE, multivariate1}
+# function to create scatter with quality overlay
+multivariate_scatter <- function(x, y, xlabel, ylabel){
+  ggplot(ww_no_outliers, aes(x, y, color = factor(quality))) +
+    geom_point(alpha = 0.8, size = 1) +
+    geom_smooth(method = "lm", se = FALSE,size=1)  +
+    scale_color_brewer(type='seq', guide=guide_legend(title='Quality')) +
+    xlab(xlabel) +
+    ylab(ylabel)
+}
 
-ggcorrplot(corr, p.mat = cor_pmat(whiteWines),
-           hc.order = TRUE, type = "lower",
-           color = c("red", "white", "blue"),
-           outline.col = "white", lab = TRUE)
-
-
+# create scatterplot by function
+multivariate_scatter(ww_no_outliers$density, ww_no_outliers$alcohol, 'density',
+               'alcohol')
 ```
 
-So our dataset contains some postive corellations, identified in purple, and
-some negative correlations, identified in red. We can see the strongest postive
-correlation is between __residial.sugar__ and __denstiy__. The strongest
-negative correlation is between __alcohol__ and __density__. There are also a 
-number of non-significant correlations marke by the X over the box.
+As before, we see the negative relationship between __alcohol__ and __density__,
+but now it is much clearer that each __quality__ value covers the whole range
+of of values in the other attributes, but the highest __quality__ of 9 only
+spans over a small set of values in the other attributes.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, multivariate2}
+# create scatterplot by function
+multivariate_scatter(ww_no_outliers$density, ww_no_outliers$residual.sugar, 
+                     'density', 'residual.sugar')
+```
+
+An interesting observation in this graph and the previous one is that the
+__quality__ value of 9 has an oposite trend as the others. That's to say that if
+the the trend is postive for __quality__ values 3 through 8, then 9 is negative.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, multivariate3}
+# create scatterplot by function
+multivariate_scatter(ww_no_outliers$residual.sugar, ww_no_outliers$alcohol, 
+               'residual.sugar', 'alcohol')
+```
+
+Again we can see the same trend where only the highest __quality__ value of 9 is
+limited to a small range in the other attributes values and the __quality__
+value of 9 follows and oppisite trend than the rest  of the __quality__ values.
 
 # Multivariate Analysis
 
-It's interesting to see that there are many more positive correlations between
-attributes within the dataset than negative ones. As certain levels of some
-attributes rise it directtly affects these other attributes in a positive way.
-As an example, though this probably seems intuitive, if there are more 
-__residual.sugar__ then it is expected that the wine will have more __density__.
-
-As the __Quality Score__ was the primary focus of this dataset, it was a little
-surprising to see that __citric.acid__, something I previously thought was a
-large component in the taste of wine, has no real correlation to the 
-__quality__.
+The most intersting finding from the multivariate analysis would have relate to 
+the __quality__ attribute. When __quality__ is analyzed along with other
+attributes each level of quality follows the same trend , postive or negative,
+with the eception of the highest __quality__ rating of 9. The highest
+__quality__ rating of 9 consistently trends opposite of the other ratings.
 
 ------
 
 # Final Plots and Summary
 
 We've spent a bit of time exploring the dataset. We learned a lot and came to
-the conclusion that __Quality Score__ was the main attribute to focus on.
+the conclusion that even though __Quality Score__ appeared to be a good starting
+focus as a main attribute, there was not a lot of evidence that any one or 
+combination of atributes directly contributed to it.
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE, Plot_One}
 # create facet containing histograms for each attribute
-ggplot(ww_long, aes(value)) + 
-    facet_wrap(~measure, scales = 'free') + 
-    geom_histogram(fill = 'darkblue')
+grid.arrange(ggplot(whiteWines, aes(1, chlorides)) +
+               geom_jitter(alpha = 0.1) +
+               geom_boxplot(alpha = 0.2, color = 'red') +
+               ggtitle('Data With Outliers') +
+               theme(plot.title = element_text(hjust = 0.5),
+                     axis.title.x=element_blank(),
+                     axis.text.x=element_blank(),
+                     axis.ticks.x=element_blank()) +
+               ylab('Chlorides (sodium chloride - g / dm^3)'),
+             ggplot(ww_no_outliers, aes(1, chlorides)) +
+               geom_jitter(alpha = 0.1) +
+               geom_boxplot(alpha = 0.2, color = 'red')  +
+               ggtitle('Data Without Outliers') +
+               theme(plot.title = element_text(hjust = 0.5),
+                     axis.title.x=element_blank(),
+                     axis.text.x=element_blank(),
+                     axis.ticks.x=element_blank()) +
+               ylab('Chlorides (sodium chloride - g / dm^3)'), ncol = 2) 
 ```
 
-We began by taking a look at the details of the other attributes through an 
-overview of thier histograms.
+When we began our analysis we found that our dataset contained a lot of
+outliers. In order to mitigate the effect that had on our analysis, a new subset
+of the data was created to remove those outliers.
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE, Plot_Two}
-# create facet containing histograms for each attribute
-ggplot(ww_long, aes(value, quality)) + 
-    facet_wrap(~measure, scales = 'free') + 
-    geom_point(color = 'darkblue') +
-    geom_smooth(color = 'orange')
-```
-
-We  continued our analysis by looking at how these attributes affected our 
-__Quality Score__ by looking at scatterplots and smooth curves.
-
-```{r echo=FALSE, message=FALSE, warning=FALSE, Plot_Three}
 # create correlation for all attributes
-ggcorrplot(corr, p.mat = cor_pmat(whiteWines),
+corr <- round(cor(ww_no_outliers), 1)
+
+ggcorrplot(corr, p.mat = cor_pmat(ww_no_outliers),
            hc.order = TRUE, type = "lower",
            color = c("red", "white", "blue"),
-           outline.col = "white", lab = TRUE)
+           outline.col = "white", lab = TRUE) +
+   ggtitle('Correlations Between Attributes') +
+   theme(plot.title = element_text(hjust = 0.5))
+  
+```
+
+After ensuring all outliers were removed from the dataset, we had a look at the 
+correlation between each of the attributes to determine is there were any
+relationships beyond __quality__ that were of intrest to look at.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Plot_Three}
+multivariate_scatter(ww_no_outliers$residual.sugar, ww_no_outliers$alcohol, 
+               'residual.sugar', 'alcohol') +
+  ggtitle('Quality of Wine as it relates to % of Alcohol and Amount of 
+          Residual Sugars') +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  xlab('Residual Sugar (g / dm^3)') +
+  ylab('Alcohol (% by volume)')
 
 ```
 
-Finally we looked at the correlation between each attribute and the other
-attributes in the dataset.
+Finally we explored some of the attribute through bivarite and multivariate
+analysis.
 
 ------
 
